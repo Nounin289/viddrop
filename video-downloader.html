@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>VidDrop — حمّل بلا حدود</title>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;600;700;900&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #080b12;
+    --surface: #0e1420;
+    --card: #121926;
+    --border: rgba(255,255,255,0.06);
+    --accent1: #7c3aed;
+    --accent2: #06b6d4;
+    --accent3: #f472b6;
+    --text: #e8eaf0;
+    --muted: #64748b;
+    --glow1: rgba(124,58,237,0.4);
+    --glow2: rgba(6,182,212,0.3);
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  /* Animated background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background:
+      radial-gradient(ellipse 60% 50% at 20% 80%, var(--glow1) 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 80% 20%, var(--glow2) 0%, transparent 55%),
+      radial-gradient(ellipse 30% 30% at 60% 70%, rgba(244,114,182,0.15) 0%, transparent 50%);
+    pointer-events: none;
+    z-index: 0;
+    animation: bgPulse 8s ease-in-out infinite alternate;
+  }
+
+  @keyframes bgPulse {
+    0% { opacity: 0.7; }
+    100% { opacity: 1; }
+  }
+
+  /* Noise texture overlay */
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+    pointer-events: none;
+    z-index: 1;
+    opacity: 0.4;
+  }
+
+  /* Grid lines */
+  .grid-bg {
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+    background-size: 60px 60px;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .container {
+    position: relative;
+    z-index: 2;
+    min-height: 100vh;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: auto 1fr auto;
+    gap: 0;
+  }
+
+  /* HEADER */
+  header {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 28px 48px;
+    border-bottom: 1px solid var(--border);
+    backdrop-filter: blur(10px);
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    font-family: 'Space Mono', monospace;
+    font-size: 1.1rem;
+    letter-spacing: 2px;
+    color: var(--text);
+  }
+
+  .logo-icon {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+  }
+
+  .badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  nav {
+    display: flex;
+    gap: 32px;
+  }
+
+  nav a {
+    color: var(--muted);
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 400;
+    transition: color 0.2s;
+  }
+
+  nav a:hover { color: var(--text); }
+
+  /* LEFT PANEL - Hero */
+  .hero {
+    grid-column: 1;
+    grid-row: 2;
+    padding: 60px 48px 60px 48px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    border-left: 1px solid var(--border);
+    position: relative;
+  }
+
+  .hero-tag {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 4px;
+    color: var(--accent2);
+    text-transform: uppercase;
+    margin-bottom: 24px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+
+  .hero-tag::before {
+    content: '';
+    width: 24px;
+    height: 1px;
+    background: var(--accent2);
+  }
+
+  h1 {
+    font-size: clamp(2.8rem, 5vw, 4.5rem);
+    font-weight: 900;
+    line-height: 1.05;
+    letter-spacing: -1px;
+    margin-bottom: 24px;
+  }
+
+  h1 .line1 { display: block; color: var(--text); }
+  h1 .line2 {
+    display: block;
+    background: linear-gradient(90deg, var(--accent1), var(--accent2), var(--accent3));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .hero-desc {
+    color: var(--muted);
+    font-size: 1rem;
+    line-height: 1.8;
+    max-width: 380px;
+    margin-bottom: 40px;
+    font-weight: 300;
+  }
+
+  .platforms {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .platform-chip {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 0.75rem;
+    color: var(--muted);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    transition: all 0.2s;
+    cursor: default;
+  }
+
+  .platform-chip:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+    border-color: rgba(255,255,255,0.12);
+  }
+
+  .platform-chip .dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent2);
+  }
+
+  /* RIGHT PANEL - Main App */
+  .app-panel {
+    grid-column: 2;
+    grid-row: 2;
+    padding: 48px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+  }
+
+  .panel-label {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.65rem;
+    letter-spacing: 3px;
+    color: var(--muted);
+    text-transform: uppercase;
+  }
+
+  /* URL Input */
+  .input-group {
+    position: relative;
+  }
+
+  .url-input {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    padding: 20px 140px 20px 24px;
+    color: var(--text);
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.95rem;
+    outline: none;
+    transition: all 0.3s;
+    direction: ltr;
+  }
+
+  .url-input::placeholder { color: var(--muted); }
+
+  .url-input:focus {
+    border-color: var(--accent1);
+    box-shadow: 0 0 0 3px var(--glow1), 0 0 40px rgba(124,58,237,0.1);
+  }
+
+  .input-btn {
+    position: absolute;
+    left: 12px;
+    top: 50%;
+    transform: translateY(-50%);
+    background: linear-gradient(135deg, var(--accent1), var(--accent2));
+    border: none;
+    border-radius: 10px;
+    padding: 10px 20px;
+    color: white;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.85rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+  }
+
+  .input-btn:hover {
+    transform: translateY(-50%) scale(1.03);
+    box-shadow: 0 4px 20px var(--glow1);
+  }
+
+  .input-btn:active { transform: translateY(-50%) scale(0.98); }
+
+  /* Platform detector */
+  .platform-detector {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px;
+    background: rgba(6,182,212,0.08);
+    border: 1px solid rgba(6,182,212,0.2);
+    border-radius: 10px;
+    font-size: 0.82rem;
+    color: var(--accent2);
+    opacity: 0;
+    transform: translateY(-6px);
+    transition: all 0.3s;
+  }
+
+  .platform-detector.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  /* Video Card */
+  .video-card {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    overflow: hidden;
+    opacity: 0;
+    transform: translateY(16px);
+    transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+
+  .video-card.visible {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  .thumbnail-wrap {
+    position: relative;
+    aspect-ratio: 16/9;
+    overflow: hidden;
+    background: #0a0f18;
+  }
+
+  .thumbnail-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    opacity: 0.85;
+  }
+
+  .thumb-overlay {
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(to top, rgba(8,11,18,0.9) 0%, transparent 60%);
+  }
+
+  .thumb-meta {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    left: 16px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+  }
+
+  .video-title {
+    font-size: 0.9rem;
+    font-weight: 600;
+    line-height: 1.4;
+    max-width: 70%;
+  }
+
+  .duration-badge {
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    background: rgba(0,0,0,0.6);
+    border: 1px solid rgba(255,255,255,0.1);
+    padding: 4px 10px;
+    border-radius: 6px;
+    white-space: nowrap;
+    backdrop-filter: blur(6px);
+  }
+
+  .card-body {
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  /* Quality selector */
+  .quality-label {
+    font-size: 0.75rem;
+    color: var(--muted);
+    margin-bottom: 10px;
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+  }
+
+  .quality-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+  }
+
+  .quality-btn {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 8px;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    font-size: 0.72rem;
+    cursor: pointer;
+    transition: all 0.2s;
+    text-align: center;
+    position: relative;
+  }
+
+  .quality-btn:hover {
+    background: rgba(255,255,255,0.07);
+    color: var(--text);
+  }
+
+  .quality-btn.active {
+    background: rgba(124,58,237,0.15);
+    border-color: var(--accent1);
+    color: var(--text);
+    box-shadow: 0 0 0 1px rgba(124,58,237,0.3);
+  }
+
+  .quality-btn .q-badge {
+    display: block;
+    font-size: 0.6rem;
+    color: var(--accent2);
+    margin-top: 3px;
+    letter-spacing: 1px;
+  }
+
+  /* Download row */
+  .download-row {
+    display: flex;
+    gap: 10px;
+  }
+
+  .download-btn {
+    flex: 1;
+    background: linear-gradient(135deg, var(--accent1) 0%, var(--accent2) 100%);
+    border: none;
+    border-radius: 12px;
+    padding: 14px 20px;
+    color: white;
+    font-family: 'Cairo', sans-serif;
+    font-size: 0.9rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: all 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .download-btn::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(135deg, transparent, rgba(255,255,255,0.1));
+    opacity: 0;
+    transition: opacity 0.2s;
+  }
+
+  .download-btn:hover::after { opacity: 1; }
+  .download-btn:hover { box-shadow: 0 8px 30px var(--glow1); transform: translateY(-1px); }
+  .download-btn:active { transform: translateY(0); }
+
+  .copy-btn {
+    background: rgba(255,255,255,0.05);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--muted);
+    cursor: pointer;
+    transition: all 0.2s;
+    font-size: 1rem;
+  }
+
+  .copy-btn:hover {
+    background: rgba(255,255,255,0.08);
+    color: var(--text);
+    border-color: rgba(255,255,255,0.12);
+  }
+
+  /* Stats row */
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 12px;
+    margin-top: auto;
+  }
+
+  .stat-box {
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 14px;
+    padding: 16px;
+    text-align: center;
+  }
+
+  .stat-num {
+    font-family: 'Space Mono', monospace;
+    font-size: 1.4rem;
+    font-weight: 700;
+    background: linear-gradient(90deg, var(--accent1), var(--accent2));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+
+  .stat-label {
+    font-size: 0.72rem;
+    color: var(--muted);
+    margin-top: 4px;
+    font-weight: 300;
+  }
+
+  /* Toast */
+  .toast {
+    position: fixed;
+    bottom: 32px;
+    left: 50%;
+    transform: translateX(-50%) translateY(80px);
+    background: var(--card);
+    border: 1px solid rgba(6,182,212,0.3);
+    border-radius: 12px;
+    padding: 14px 24px;
+    font-size: 0.85rem;
+    color: var(--accent2);
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+    z-index: 100;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.5);
+  }
+
+  .toast.show {
+    transform: translateX(-50%) translateY(0);
+  }
+
+  /* FOOTER */
+  footer {
+    grid-column: 1 / -1;
+    border-top: 1px solid var(--border);
+    padding: 20px 48px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  footer .footer-text {
+    font-size: 0.75rem;
+    color: var(--muted);
+    font-family: 'Space Mono', monospace;
+    letter-spacing: 1px;
+  }
+
+  .status-dot {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-family: 'Space Mono', monospace;
+    font-size: 0.7rem;
+    color: var(--accent2);
+  }
+
+  .status-dot::before {
+    content: '';
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: var(--accent2);
+    box-shadow: 0 0 8px var(--accent2);
+    animation: blink 2s ease-in-out infinite;
+  }
+
+  @keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  /* Loading state */
+  .spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid rgba(255,255,255,0.2);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: spin 0.6s linear infinite;
+    display: none;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  .download-btn.loading .spinner { display: block; }
+  .download-btn.loading span { display: none; }
+
+  /* Error state */
+  .error-msg {
+    background: rgba(239,68,68,0.08);
+    border: 1px solid rgba(239,68,68,0.2);
+    border-radius: 10px;
+    padding: 12px 16px;
+    font-size: 0.82rem;
+    color: #f87171;
+    display: none;
+  }
+
+  .error-msg.visible { display: block; }
+
+  /* Entrance animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .hero-tag { animation: fadeUp 0.5s ease forwards; }
+  h1 { animation: fadeUp 0.5s 0.1s ease both; }
+  .hero-desc { animation: fadeUp 0.5s 0.2s ease both; }
+  .platforms { animation: fadeUp 0.5s 0.3s ease both; }
+  .panel-label { animation: fadeUp 0.5s 0.15s ease both; }
+  .input-group { animation: fadeUp 0.5s 0.25s ease both; }
+  .stats-row { animation: fadeUp 0.5s 0.35s ease both; }
+
+  /* Responsive */
+  @media (max-width: 900px) {
+    .container {
+      grid-template-columns: 1fr;
+    }
+    header { padding: 20px 24px; }
+    nav { display: none; }
+    .hero {
+      grid-column: 1;
+      grid-row: 2;
+      padding: 40px 24px 32px;
+      border-left: none;
+      border-bottom: 1px solid var(--border);
+    }
+    .app-panel {
+      grid-column: 1;
+      grid-row: 3;
+      padding: 32px 24px;
+    }
+    footer { padding: 16px 24px; flex-direction: column; gap: 8px; text-align: center; }
+  }
+</style>
+</head>
+<body>
+<div class="grid-bg"></div>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <header>
+    <div class="logo">
+      <div class="logo-icon">⬇</div>
+      <div>
+        <div>VIDDROP</div>
+        <div class="badge">Video Downloader</div>
+      </div>
+    </div>
+    <nav>
+      <a href="#">الرئيسية</a>
+      <a href="#">المزايا</a>
+      <a href="#">المدعومة</a>
+      <a href="#">التواصل</a>
+    </nav>
+  </header>
+
+  <!-- HERO -->
+  <section class="hero">
+    <div class="hero-tag">أسرع وأسهل طريقة</div>
+    <h1>
+      <span class="line1">حمّل</span>
+      <span class="line2">بلا حدود</span>
+    </h1>
+    <p class="hero-desc">
+      أدخل رابط أي فيديو من منصاتك المفضلة واحصل على تنزيل مباشر بالجودة التي تريدها — يوتيوب، تيك توك، إنستغرام، وأكثر.
+    </p>
+    <div class="platforms">
+      <div class="platform-chip"><span class="dot"></span> YouTube</div>
+      <div class="platform-chip"><span class="dot"></span> TikTok</div>
+      <div class="platform-chip"><span class="dot"></span> Instagram</div>
+      <div class="platform-chip"><span class="dot"></span> Facebook</div>
+      <div class="platform-chip"><span class="dot"></span> Threads</div>
+    </div>
+  </section>
+
+  <!-- APP PANEL -->
+  <section class="app-panel">
+    <div class="panel-label">// الصق رابط الفيديو</div>
+
+    <div class="input-group">
+      <input
+        class="url-input"
+        type="url"
+        id="urlInput"
+        placeholder="https://www.youtube.com/watch?v=..."
+        autocomplete="off"
+        spellcheck="false"
+      />
+      <button class="input-btn" onclick="analyzeUrl()">تحليل ↵</button>
+    </div>
+
+    <div class="platform-detector" id="platformDetector">
+      <span>🎯</span>
+      <span id="platformText">تم اكتشاف المنصة</span>
+    </div>
+
+    <div class="error-msg" id="errorMsg">
+      ⚠ الرابط غير صالح أو المنصة غير مدعومة. يرجى التحقق والمحاولة مجدداً.
+    </div>
+
+    <!-- Video Result Card -->
+    <div class="video-card" id="videoCard">
+      <div class="thumbnail-wrap">
+        <img id="thumbnail" src="" alt="thumbnail" />
+        <div class="thumb-overlay"></div>
+        <div class="thumb-meta">
+          <div class="video-title" id="videoTitle">عنوان الفيديو سيظهر هنا</div>
+          <div class="duration-badge" id="duration">00:00</div>
+        </div>
+      </div>
+
+      <div class="card-body">
+        <div>
+          <div class="quality-label">// اختر الجودة</div>
+          <div class="quality-grid">
+            <button class="quality-btn active" data-q="1080p" onclick="selectQuality(this)">
+              1080p
+              <span class="q-badge">FULL HD</span>
+            </button>
+            <button class="quality-btn" data-q="720p" onclick="selectQuality(this)">
+              720p
+              <span class="q-badge">HD</span>
+            </button>
+            <button class="quality-btn" data-q="360p" onclick="selectQuality(this)">
+              360p
+              <span class="q-badge">SD</span>
+            </button>
+            <button class="quality-btn" data-q="audio" onclick="selectQuality(this)">
+              ♪
+              <span class="q-badge">AUDIO</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="download-row">
+          <button class="download-btn" id="downloadBtn" onclick="startDownload()">
+            <div class="spinner"></div>
+            <span>⬇ تحميل الآن</span>
+          </button>
+          <button class="copy-btn" onclick="copyLink()" title="نسخ الرابط">🔗</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Stats -->
+    <div class="stats-row">
+      <div class="stat-box">
+        <div class="stat-num">5+</div>
+        <div class="stat-label">منصة مدعومة</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">4K</div>
+        <div class="stat-label">أعلى جودة</div>
+      </div>
+      <div class="stat-box">
+        <div class="stat-num">∞</div>
+        <div class="stat-label">بدون حدود</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- FOOTER -->
+  <footer>
+    <div class="footer-text">© 2025 VidDrop — جميع الحقوق محفوظة</div>
+    <div class="status-dot">الخادم يعمل</div>
+  </footer>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">✓ تم نسخ الرابط!</div>
+
+<script>
+  const platforms = {
+    'youtube.com': { name: 'YouTube', emoji: '▶️' },
+    'youtu.be': { name: 'YouTube', emoji: '▶️' },
+    'tiktok.com': { name: 'TikTok', emoji: '🎵' },
+    'instagram.com': { name: 'Instagram', emoji: '📷' },
+    'facebook.com': { name: 'Facebook', emoji: '👤' },
+    'fb.watch': { name: 'Facebook', emoji: '👤' },
+    'threads.net': { name: 'Threads', emoji: '🧵' },
+  };
+
+  const demoVideos = [
+    { title: 'أفضل لحظات كأس العالم 2022 — ملخص شامل', duration: '12:34', thumb: 'https://picsum.photos/seed/video1/640/360' },
+    { title: 'تعلم البرمجة في 30 دقيقة — دورة مكثفة للمبتدئين', duration: '29:58', thumb: 'https://picsum.photos/seed/video2/640/360' },
+    { title: 'جولة في الجزائر العاصمة — أجمل الأماكن السياحية', duration: '8:22', thumb: 'https://picsum.photos/seed/video3/640/360' },
+  ];
+
+  let selectedQuality = '1080p';
+  let currentDemo = null;
+
+  const urlInput = document.getElementById('urlInput');
+  urlInput.addEventListener('input', onUrlInput);
+  urlInput.addEventListener('keydown', e => { if (e.key === 'Enter') analyzeUrl(); });
+
+  function onUrlInput() {
+    const val = urlInput.value.trim();
+    const detector = document.getElementById('platformDetector');
+    const err = document.getElementById('errorMsg');
+    err.classList.remove('visible');
+
+    if (!val) { detector.classList.remove('visible'); return; }
+
+    const detected = detectPlatform(val);
+    if (detected) {
+      document.getElementById('platformText').textContent = `${detected.emoji} تم اكتشاف: ${detected.name}`;
+      detector.classList.add('visible');
+    } else {
+      detector.classList.remove('visible');
+    }
+  }
+
+  function detectPlatform(url) {
+    try {
+      const host = new URL(url).hostname.replace('www.', '');
+      for (const [domain, info] of Object.entries(platforms)) {
+        if (host.includes(domain)) return info;
+      }
+    } catch {}
+    return null;
+  }
+
+  function analyzeUrl() {
+    const val = urlInput.value.trim();
+    const err = document.getElementById('errorMsg');
+    const card = document.getElementById('videoCard');
+
+    if (!val) return;
+
+    const detected = detectPlatform(val);
+    if (!detected) {
+      err.classList.add('visible');
+      card.classList.remove('visible');
+      return;
+    }
+
+    err.classList.remove('visible');
+
+    // Simulate loading
+    const btn = document.querySelector('.input-btn');
+    btn.textContent = '...';
+    btn.disabled = true;
+
+    setTimeout(() => {
+      btn.textContent = 'تحليل ↵';
+      btn.disabled = false;
+
+      currentDemo = demoVideos[Math.floor(Math.random() * demoVideos.length)];
+      document.getElementById('thumbnail').src = currentDemo.thumb;
+      document.getElementById('videoTitle').textContent = currentDemo.title;
+      document.getElementById('duration').textContent = currentDemo.duration;
+
+      card.classList.add('visible');
+    }, 900);
+  }
+
+  function selectQuality(btn) {
+    document.querySelectorAll('.quality-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    selectedQuality = btn.dataset.q;
+  }
+
+  function startDownload() {
+    const btn = document.getElementById('downloadBtn');
+    btn.classList.add('loading');
+    btn.disabled = true;
+
+    setTimeout(() => {
+      btn.classList.remove('loading');
+      btn.disabled = false;
+      showToast('✓ جاري التحميل...');
+    }, 1500);
+  }
+
+  function copyLink() {
+    const val = urlInput.value.trim() || 'https://viddrop.app/download?q=' + selectedQuality;
+    navigator.clipboard.writeText(val).catch(() => {});
+    showToast('✓ تم نسخ الرابط!');
+  }
+
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2800);
+  }
+</script>
+</body>
+</html>
